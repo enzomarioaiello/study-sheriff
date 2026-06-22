@@ -59,7 +59,8 @@ def decode_scale(box, cls, kpt, stride):
     x2 = (ax + dist[..., 2]) * stride
     y2 = (ay + dist[..., 3]) * stride
 
-    conf = sigmoid(cls[..., 0])                                  # (h,w) person score
+    conf = cls[..., 0]                                           # class head is already
+    #                                                            # sigmoid-activated in this HEF
 
     k = kpt.reshape(h, w, NUM_KPTS, 3)
     kx = (k[..., 0] * 2.0 + cols[..., None]) * stride
@@ -202,7 +203,7 @@ def main():
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
                     if args.display:
-                        cv2.imshow("StudySheriff pose", disp)
+                        cv2.imshow("study-sheriff", disp)
                         if cv2.waitKey(1) & 0xFF == ord("q"):
                             break
                     elif args.save_dir and frames % 15 == 0:
