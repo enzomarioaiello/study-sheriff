@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Study Sheriff — Moderator Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <h1>Study Sheriff</h1>
+      <div class="sub">Library study-space monitor &mdash; moderator view</div>
+    </div>
+    <div class="clock" id="clock"></div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="camwrap">
+        <svg id="camsvg" viewBox="0 0 640 400"></svg>
+        <div class="badge live"><span class="dot" id="rec-dot"></span><span>LIVE</span></div>
+        <div class="badge fps" id="fps-badge">-- FPS</div>
+        <div class="freeze" id="freeze-banner">
+          <span>&#9888;</span>
+          <span>Camera signal lost &mdash; last frame frozen</span>
+        </div>
+      </div>
+      <div class="controls"></div>
+    </div>
+
+    <div>
+      <div class="metric-grid" id="metric-grid"></div>
+      <div class="focus-card">
+        <div class="focus-top">
+          <span class="lbl">Focus score</span>
+          <span class="hint">deskwork + talking weighted</span>
+        </div>
+        <div class="focus-row">
+          <span class="focus-score" id="focus-score">--</span>
+          <div class="focus-bar-bg"><div class="focus-bar" id="focus-bar"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <h2>Activity over time</h2>
+      <div class="chartwrap"><canvas id="trendChart"></canvas></div>
+      <div class="legend" id="trend-legend"></div>
+    </div>
+    <div class="panel">
+      <h2>System health</h2>
+      <table><tbody id="health-table"></tbody></table>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <h2 style="display:flex; justify-content:space-between; align-items:baseline;">
+      <span>People in frame</span>
+      <span id="person-count-label" style="font-size:12px; color:var(--text2); font-weight:400;"></span>
+    </h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:14%;">ID</th>
+          <th style="width:34%;">Activity</th>
+          <th style="width:24%;">Confidence</th>
+          <th class="right" style="width:28%;">Time in activity</th>
+        </tr>
+      </thead>
+      <tbody id="person-table"></tbody>
+    </table>
+  </div>
+
+  <div class="alert" id="alert-box">
+    <span>&#9888;</span>
+    <span id="alert-text"></span>
+  </div>
+
+
+
+</div>
+  <script type="module" src="../js/main.js"></script>
+</body>
+</html>
