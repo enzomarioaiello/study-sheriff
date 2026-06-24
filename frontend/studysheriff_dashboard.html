@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>StudySheriff &mdash; Moderator Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#0e1014; --panel:#15171c; --panel2:#1b1e24; --border:#2a2d34;
+    --text:#eceef0; --text2:#9a9da3; --text3:#6b6e75;
+    --green:#1D9E75; --blue:#378ADD; --coral:#D85A30; --amber:#BA7517; --gray:#888780; --pink:#D4537E; --red:#A32D2D;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size:14px; line-height:1.5; padding:24px;
+  }
+  .wrap{max-width:1180px; margin:0 auto;}
+  .header{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:8px;}
+  .header h1{font-size:20px; font-weight:600; margin:0;}
+  .header .sub{font-size:13px; color:var(--text2); margin-top:2px;}
+  .clock{font-size:13px; color:var(--text2);}
+  .grid{display:grid; grid-template-columns:1.4fr 1fr; gap:16px; align-items:start;}
+  @media (max-width:880px){ .grid{grid-template-columns:1fr;} }
+  .panel{background:var(--panel); border:0.5px solid var(--border); border-radius:12px; padding:16px;}
+  .panel h2{font-size:14px; font-weight:600; margin:0 0 10px;}
+  .camwrap{position:relative; background:#0a0b0d; border-radius:10px; overflow:hidden; aspect-ratio:16/10;}
+  svg#camsvg{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  .badge{position:absolute; padding:3px 10px; border-radius:6px; font-size:12px; background:rgba(0,0,0,0.55); color:#fff; display:flex; align-items:center; gap:6px;}
+  .badge.live{top:10px; left:10px;}
+  .badge.fps{top:10px; right:10px;}
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--red); display:inline-block;}
+  .freeze{display:none; position:absolute; inset:0; background:rgba(0,0,0,0.65); align-items:center; justify-content:center; flex-direction:column; gap:6px; color:#fff; font-size:13px;}
+  .controls{display:flex; gap:8px; margin-top:10px;}
+  button{
+    font-size:12px; padding:6px 12px; background:transparent; color:var(--text);
+    border:0.5px solid var(--border); border-radius:8px; cursor:pointer;
+  }
+  button:hover{background:var(--panel2);}
+  button:active{transform:scale(0.98);}
+  .metric-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;}
+  .metric{background:var(--panel2); border-radius:8px; padding:12px 14px;}
+  .metric .lbl{font-size:12px; color:var(--text2); margin-bottom:4px; display:flex; align-items:center; gap:6px;}
+  .metric .val{font-size:22px; font-weight:600;}
+  .dotsq{width:9px; height:9px; border-radius:2px; display:inline-block;}
+  .focus-card{background:var(--panel2); border-radius:8px; padding:14px;}
+  .focus-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;}
+  .focus-top .lbl{font-size:13px; color:var(--text2);}
+  .focus-top .hint{font-size:11px; color:var(--text3);}
+  .focus-row{display:flex; align-items:center; gap:12px;}
+  .focus-score{font-size:30px; font-weight:600; min-width:64px;}
+  .focus-bar-bg{flex:1; height:8px; background:#26292f; border-radius:4px; overflow:hidden;}
+  .focus-bar{height:100%; width:0%; background:var(--green); transition:width .4s, background .4s;}
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;}
+  @media (max-width:880px){ .two-col{grid-template-columns:1fr;} }
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; padding:6px 4px; font-weight:600; color:var(--text2); border-bottom:0.5px solid var(--border);}
+  td{padding:6px 4px; border-bottom:0.5px solid var(--border);}
+  td.right, th.right{text-align:right;}
+  .legend{display:flex; flex-wrap:wrap; gap:12px; margin-top:8px; font-size:12px; color:var(--text2);}
+  .legend span.item{display:flex; align-items:center; gap:5px;}
+  .alert{display:none; margin-top:16px; padding:10px 14px; border-radius:8px; background:rgba(163,45,45,0.18); border:0.5px solid rgba(163,45,45,0.4); color:#f3b5b5; font-size:13px; align-items:center; gap:8px;}
+  .alert.show{display:flex;}
+  .note{margin-top:16px; font-size:11px; color:var(--text3); line-height:1.6;}
+  .note code{font-family:Menlo, Consolas, monospace;}
+  canvas#trendChart{width:100% !important; height:100% !important;}
+  .chartwrap{position:relative; width:100%; height:200px;}
+  .pname{display:inline-flex; align-items:center; gap:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div>
+      <h1>StudySheriff</h1>
+      <div class="sub">Library study-space monitor &mdash; moderator view</div>
+    </div>
+    <div class="clock" id="clock"></div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="camwrap">
+        <svg id="camsvg" viewBox="0 0 640 400"></svg>
+        <div class="badge live"><span class="dot" id="rec-dot"></span><span>LIVE</span></div>
+        <div class="badge fps" id="fps-badge">-- FPS</div>
+        <div class="freeze" id="freeze-banner">
+          <span>&#9888;</span>
+          <span>Camera signal lost &mdash; last frame frozen</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button id="btn-freeze">Simulate camera disconnect</button>
+        <button id="btn-odd">Simulate unknown activity</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="metric-grid" id="metric-grid"></div>
+      <div class="focus-card">
+        <div class="focus-top">
+          <span class="lbl">Focus score</span>
+          <span class="hint">deskwork + talking weighted</span>
+        </div>
+        <div class="focus-row">
+          <span class="focus-score" id="focus-score">--</span>
+          <div class="focus-bar-bg"><div class="focus-bar" id="focus-bar"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <h2>Activity over time</h2>
+      <div class="chartwrap"><canvas id="trendChart"></canvas></div>
+      <div class="legend" id="trend-legend"></div>
+    </div>
+    <div class="panel">
+      <h2>System health</h2>
+      <table><tbody id="health-table"></tbody></table>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <h2 style="display:flex; justify-content:space-between; align-items:baseline;">
+      <span>People in frame</span>
+      <span id="person-count-label" style="font-size:12px; color:var(--text2); font-weight:400;"></span>
+    </h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:14%;">ID</th>
+          <th style="width:34%;">Activity</th>
+          <th style="width:24%;">Confidence</th>
+          <th class="right" style="width:28%;">Time in activity</th>
+        </tr>
+      </thead>
+      <tbody id="person-table"></tbody>
+    </table>
+  </div>
+
+  <div class="alert" id="alert-box">
+    <span>&#9888;</span>
+    <span id="alert-text"></span>
+  </div>
+
+  <div class="note">
+    Simulated feed for demo purposes &mdash; this file runs standalone with no server or install required.
+    To wire it to the real Pi pipeline, replace the <code>tick()</code> function with data pushed from
+    <code>pose_live.py</code> + the trained classifier (e.g. over a WebSocket), keeping the same
+    <code>people</code> array shape (id, x, y, activity, confidence).
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var CLASSES = ["deskwork","talking","phone","resting","absent"];
+  var COLORS = { deskwork:"#1D9E75", talking:"#378ADD", phone:"#D85A30", resting:"#BA7517", absent:"#888780" };
+  var LABELS = { deskwork:"Active deskwork", talking:"Talking", phone:"Phone use", resting:"Resting", absent:"Absent / walking" };
+  var UNKNOWN_COLOR = "#D4537E";
+
+  var N_PEOPLE = 7;
+  var people = [];
+  for (var i=0;i<N_PEOPLE;i++){
+    people.push({
+      id: "P" + (i+1),
+      x: 60 + Math.random()*520,
+      y: 60 + Math.random()*280,
+      vx: (Math.random()-0.5)*0.6,
+      vy: (Math.random()-0.5)*0.6,
+      activity: CLASSES[Math.floor(Math.random()*CLASSES.length)],
+      conf: 0.7 + Math.random()*0.25,
+      since: Date.now() - Math.random()*60000,
+      switchAt: Date.now() + 3000 + Math.random()*9000
+    });
+  }
+
+  var frozen = false, oddActive = false;
+  var fps = 14.5 + Math.random();
+  var history = [];
+  var MAX_HISTORY = 24;
+
+  function fmtTime(ms){
+    var s = Math.floor(ms/1000);
+    var m = Math.floor(s/60); s = s%60;
+    return m + ":" + (s<10?"0":"") + s;
+  }
+
+  function pickNewActivity(skip){
+    var pool = CLASSES.filter(function(c){return c!==skip;});
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+
+  function step(){
+    var now = Date.now();
+    if (!frozen){
+      people.forEach(function(p){
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 40 || p.x > 600){ p.vx *= -1; p.x = Math.max(40, Math.min(600, p.x)); }
+        if (p.y < 40 || p.y > 360){ p.vy *= -1; p.y = Math.max(40, Math.min(360, p.y)); }
+        if (now > p.switchAt){
+          p.activity = oddActive && Math.random() < 0.5 ? "unknown" : pickNewActivity(p.activity);
+          p.conf = p.activity === "unknown" ? (0.3+Math.random()*0.15) : (0.72+Math.random()*0.25);
+          p.since = now;
+          p.switchAt = now + 4000 + Math.random()*9000;
+        }
+      });
+      fps = 14 + Math.random()*1.5 - (oddActive?0.3:0);
+    }
+    render();
+  }
+
+  function render(){
+    renderClock();
+    renderCamera();
+    renderMetrics();
+    renderPersonTable();
+    renderHealth();
+    renderAlert();
+  }
+
+  function renderClock(){
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+  }
+
+  function renderCamera(){
+    var svg = document.getElementById('camsvg');
+    var freezeBanner = document.getElementById('freeze-banner');
+    freezeBanner.style.display = frozen ? 'flex' : 'none';
+    document.getElementById('rec-dot').style.background = frozen ? '#888780' : '#A32D2D';
+    document.getElementById('fps-badge').textContent = frozen ? 'FROZEN' : fps.toFixed(1) + ' FPS';
+
+    var parts = [];
+    parts.push('<rect x="0" y="0" width="640" height="400" fill="#0a0b0d"/>');
+    parts.push('<rect x="40" y="320" width="180" height="14" fill="#15171a"/>');
+    parts.push('<rect x="430" y="40" width="14" height="200" fill="#15171a"/>');
+    for (var gx=0; gx<=640; gx+=80) parts.push('<line x1="'+gx+'" y1="0" x2="'+gx+'" y2="400" stroke="#1a1c20" stroke-width="1"/>');
+    for (var gy=0; gy<=400; gy+=80) parts.push('<line x1="0" y1="'+gy+'" x2="640" y2="'+gy+'" stroke="#1a1c20" stroke-width="1"/>');
+
+    people.forEach(function(p){
+      var isUnknown = p.activity === "unknown";
+      var color = isUnknown ? UNKNOWN_COLOR : COLORS[p.activity];
+      var bw = 46, bh = 70;
+      var bx = p.x - bw/2, by = p.y - bh/2;
+      parts.push('<rect x="'+bx+'" y="'+by+'" width="'+bw+'" height="'+bh+'" fill="none" stroke="'+color+'" stroke-width="2" rx="3"/>');
+      parts.push('<circle cx="'+p.x+'" cy="'+(p.y-bh/2+10)+'" r="6" fill="none" stroke="'+color+'" stroke-width="1.5"/>');
+      parts.push('<line x1="'+p.x+'" y1="'+(p.y-bh/2+16)+'" x2="'+p.x+'" y2="'+(p.y+8)+'" stroke="'+color+'" stroke-width="1.5"/>');
+      parts.push('<line x1="'+p.x+'" y1="'+(p.y-12)+'" x2="'+(p.x-14)+'" y2="'+(p.y+4)+'" stroke="'+color+'" stroke-width="1.5"/>');
+      parts.push('<line x1="'+p.x+'" y1="'+(p.y-12)+'" x2="'+(p.x+14)+'" y2="'+(p.y+4)+'" stroke="'+color+'" stroke-width="1.5"/>');
+      parts.push('<line x1="'+p.x+'" y1="'+(p.y+8)+'" x2="'+(p.x-12)+'" y2="'+(p.y+bh/2)+'" stroke="'+color+'" stroke-width="1.5"/>');
+      parts.push('<line x1="'+p.x+'" y1="'+(p.y+8)+'" x2="'+(p.x+12)+'" y2="'+(p.y+bh/2)+'" stroke="'+color+'" stroke-width="1.5"/>');
+      var label = isUnknown ? "unknown" : p.activity;
+      var tw = label.length * 6.4 + 10;
+      parts.push('<rect x="'+bx+'" y="'+(by-16)+'" width="'+tw+'" height="15" fill="'+color+'"/>');
+      parts.push('<text x="'+(bx+5)+'" y="'+(by-5)+'" font-size="11" fill="#0b0c0d" font-family="-apple-system,sans-serif">'+p.id+' '+label+'</text>');
+    });
+
+    svg.innerHTML = parts.join('');
+  }
+
+  function renderMetrics(){
+    var counts = {deskwork:0,talking:0,phone:0,resting:0,absent:0,unknown:0};
+    people.forEach(function(p){ counts[p.activity] = (counts[p.activity]||0) + 1; });
+
+    var grid = document.getElementById('metric-grid');
+    grid.innerHTML = CLASSES.map(function(c){
+      return '<div class="metric">'
+        + '<div class="lbl"><span class="dotsq" style="background:'+COLORS[c]+';"></span>'+LABELS[c]+'</div>'
+        + '<div class="val">'+counts[c]+'</div>'
+        + '</div>';
+    }).join('');
+
+    var total = people.length;
+    var focusWeight = (counts.deskwork*1.0 + counts.talking*0.5 + counts.phone*0.1 + counts.resting*0.2 + counts.absent*0 + (counts.unknown||0)*0.3);
+    var score = total ? Math.round((focusWeight/total)*100) : 0;
+    document.getElementById('focus-score').textContent = score + '%';
+    var bar = document.getElementById('focus-bar');
+    bar.style.width = score + '%';
+    bar.style.background = score >= 60 ? '#1D9E75' : (score >= 35 ? '#BA7517' : '#A32D2D');
+
+    history.push(counts);
+    if (history.length > MAX_HISTORY) history.shift();
+    updateChart();
+  }
+
+  function renderPersonTable(){
+    document.getElementById('person-count-label').textContent = people.length + ' detected';
+    var tbody = document.getElementById('person-table');
+    var now = Date.now();
+    tbody.innerHTML = people.map(function(p){
+      var isUnknown = p.activity === "unknown";
+      var color = isUnknown ? UNKNOWN_COLOR : COLORS[p.activity];
+      var label = isUnknown ? "Unknown" : LABELS[p.activity];
+      return '<tr>'
+        + '<td>'+p.id+'</td>'
+        + '<td><span class="pname"><span class="dotsq" style="background:'+color+';"></span>'+label+'</span></td>'
+        + '<td>'+Math.round(p.conf*100)+'%</td>'
+        + '<td class="right" style="color:var(--text2);">'+fmtTime(now-p.since)+'</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function renderHealth(){
+    var rows = [
+      ["NPU model", "yolov8s_pose.hef + classifier"],
+      ["Inference latency", frozen ? "--" : (62 + Math.random()*8).toFixed(0) + " ms/frame"],
+      ["Pipeline FPS", frozen ? "0.0" : fps.toFixed(1)],
+      ["Camera", frozen ? "Disconnected" : "Camera Module 3 OK"],
+      ["Unknown rate (5 min)", (oddActive ? (18+Math.random()*6) : (2+Math.random()*2)).toFixed(0) + "%"]
+    ];
+    document.getElementById('health-table').innerHTML = rows.map(function(r){
+      return '<tr><td style="color:var(--text2);">'+r[0]+'</td><td class="right">'+r[1]+'</td></tr>';
+    }).join('');
+  }
+
+  function renderAlert(){
+    var box = document.getElementById('alert-box');
+    var text = document.getElementById('alert-text');
+    if (frozen){
+      box.classList.add('show');
+      text.textContent = 'Camera disconnect detected — feed frozen on last frame. Check the Pi camera ribbon cable and rpicam-vid process.';
+    } else if (oddActive){
+      box.classList.add('show');
+      text.textContent = 'Unknown activity rate elevated — one or more people are below the classifier confidence threshold. Review for a new behavior class.';
+    } else {
+      box.classList.remove('show');
+    }
+  }
+
+  // ---- minimal built-in line chart (no external dependency) ----
+  function updateChart(){
+    var canvas = document.getElementById('trendChart');
+    var wrap = canvas.parentElement;
+    var dpr = window.devicePixelRatio || 1;
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+
+    var padL = 24, padR = 6, padT = 8, padB = 18;
+    var plotW = w - padL - padR, plotH = h - padT - padB;
+    var maxY = N_PEOPLE;
+    var n = history.length;
+    if (n < 2){ buildLegend(); return; }
+
+    // gridlines
+    ctx.strokeStyle = 'rgba(136,135,128,0.15)';
+    ctx.fillStyle = '#888780';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    for (var gy=0; gy<=maxY; gy++){
+      var yy = padT + plotH - (gy/maxY)*plotH;
+      ctx.beginPath(); ctx.moveTo(padL, yy); ctx.lineTo(w-padR, yy); ctx.stroke();
+      ctx.fillText(String(gy), padL-6, yy+3);
+    }
+
+    function xAt(i){ return padL + (i/(n-1))*plotW; }
+    function yAt(v){ return padT + plotH - (v/maxY)*plotH; }
+
+    // stacked areas
+    var running = new Array(n).fill(0);
+    CLASSES.forEach(function(c){
+      ctx.beginPath();
+      for (var i=0;i<n;i++){
+        var v = history[i][c] || 0;
+        var top = running[i] + v;
+        var x = xAt(i), y = yAt(top);
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      for (var i2=n-1;i2>=0;i2--){
+        var x2 = xAt(i2), y2 = yAt(running[i2]);
+        ctx.lineTo(x2,y2);
+      }
+      ctx.closePath();
+      ctx.fillStyle = COLORS[c] + 'cc';
+      ctx.fill();
+      for (var i3=0;i3<n;i3++){ running[i3] += (history[i3][c]||0); }
+    });
+
+    // x labels (start / now)
+    ctx.fillStyle = '#888780';
+    ctx.textAlign = 'left';
+    ctx.fillText('-'+((n-1)*2)+'s', padL, h-4);
+    ctx.textAlign = 'right';
+    ctx.fillText('now', w-padR, h-4);
+
+    buildLegend();
+  }
+
+  function buildLegend(){
+    var el = document.getElementById('trend-legend');
+    if (el.dataset.built) return;
+    el.dataset.built = '1';
+    el.innerHTML = CLASSES.map(function(c){
+      return '<span class="item"><span class="dotsq" style="background:'+COLORS[c]+';"></span>'+LABELS[c]+'</span>';
+    }).join('');
+  }
+
+  document.getElementById('btn-freeze').addEventListener('click', function(){
+    frozen = !frozen;
+    this.textContent = frozen ? 'Resume camera feed' : 'Simulate camera disconnect';
+    render();
+  });
+
+  document.getElementById('btn-odd').addEventListener('click', function(){
+    oddActive = !oddActive;
+    this.textContent = oddActive ? 'Clear unknown activity' : 'Simulate unknown activity';
+    if (!oddActive){
+      people.forEach(function(p){ if (p.activity === 'unknown'){ p.activity = pickNewActivity(null); p.conf = 0.7+Math.random()*0.25; p.since = Date.now(); } });
+    }
+    render();
+  });
+
+  window.addEventListener('resize', updateChart);
+
+  render();
+  setInterval(step, 900);
+})();
+</script>
+</body>
+</html>
