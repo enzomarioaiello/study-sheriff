@@ -1,6 +1,7 @@
 /.claude
 /docs
 /venv
+/.venv
 
 hailort.log
 

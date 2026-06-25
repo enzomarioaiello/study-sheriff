@@ -1,0 +1,15 @@
+.git
+.claude
+docs
+report
+results
+data
+**/__pycache__
+*.pyc
+*.npz
+*.mp4
+*.mov
+*.avi
+*.hef
+*.onnx
+.DS_Store
