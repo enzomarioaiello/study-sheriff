@@ -21,7 +21,6 @@ import time
 
 import cv2
 import numpy as np
-from hailo_platform import HEF, VDevice, FormatType
 
 # ---- YOLOv8-pose head constants ----
 REG_MAX = 16                                  # DFL bins per box side (4*16 = 64 ch)
@@ -142,26 +141,32 @@ def open_camera(w, h):
     return cam
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True)
-    ap.add_argument("--conf", type=float, default=0.4)
-    ap.add_argument("--iou", type=float, default=0.5)
-    ap.add_argument("--width", type=int, default=1280)
-    ap.add_argument("--height", type=int, default=720)
-    ap.add_argument("--display", action="store_true", help="show a live window (VNC/HDMI)")
-    ap.add_argument("--save-dir", default=None, help="headless: save annotated frames here")
-    args = ap.parse_args()
+def load_hailo_runtime():
+    from hailo_platform import HEF, FormatType, VDevice
+    return HEF, FormatType, VDevice
 
-    in_h, in_w, _ = HEF(args.model).get_input_vstream_infos()[0].shape
+
+def run_pose_pipeline(
+    model,
+    conf=0.4,
+    iou=0.5,
+    width=1280,
+    height=720,
+    display=False,
+    save_dir=None,
+    on_result=None,
+):
+    HEF, FormatType, VDevice = load_hailo_runtime()
+
+    in_h, in_w, _ = HEF(model).get_input_vstream_infos()[0].shape
     print(f"[INFO] model input {in_w}x{in_h}")
-    if args.save_dir:
-        os.makedirs(args.save_dir, exist_ok=True)
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
 
-    cam = open_camera(args.width, args.height)
+    cam = open_camera(width, height)
 
     with VDevice() as target:
-        infer = target.create_infer_model(args.model)
+        infer = target.create_infer_model(model)
         infer.input().set_format_type(FormatType.UINT8)          # feed raw uint8
         out_names = list(infer.output_names)
         for n in out_names:
@@ -182,6 +187,7 @@ def main():
             frames, t0, fps = 0, time.time(), 0.0
             try:
                 while True:
+                    loop_start = time.time()
                     # picamera2 'RGB888' returns a BGR-ordered array (Pi/libcamera quirk)
                     frame = cam.capture_array()
                     oh, ow = frame.shape[:2]
@@ -191,7 +197,7 @@ def main():
 
                     cfg.run([bindings], timeout=10_000)
                     boxes, scores, kpts = postprocess(
-                        [out_bufs[n] for n in out_names], args.conf, args.iou)
+                        [out_bufs[n] for n in out_names], conf, iou)
 
                     disp = frame.copy()                          # already BGR -> ok for cv2
                     draw(disp, boxes, scores, kpts, ow / in_w, oh / in_h)
@@ -202,19 +208,53 @@ def main():
                     cv2.putText(disp, f"{fps:4.1f} FPS  {len(boxes)} ppl", (10, 26),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-                    if args.display:
+                    if on_result:
+                        person_count = len(boxes)
+                        on_result({
+                            "frame": frame,
+                            "annotated_frame": disp,
+                            "current_class": "person" if person_count else "no_person",
+                            "person_count": person_count,
+                            "fps": fps,
+                            "latency_ms": (time.time() - loop_start) * 1000.0,
+                            "per_person_classes": ["person"] * person_count,
+                        })
+
+                    if display:
                         cv2.imshow("study-sheriff", disp)
                         if cv2.waitKey(1) & 0xFF == ord("q"):
                             break
-                    elif args.save_dir and frames % 15 == 0:
-                        cv2.imwrite(os.path.join(args.save_dir, f"frame_{frames:05d}.jpg"), disp)
+                    elif save_dir and frames % 15 == 0:
+                        cv2.imwrite(os.path.join(save_dir, f"frame_{frames:05d}.jpg"), disp)
             except KeyboardInterrupt:
                 pass
             finally:
                 cam.stop()
-                if args.display:
+                if display:
                     cv2.destroyAllWindows()
                 print(f"[INFO] stopped after {frames} frames (~{fps:.1f} FPS)")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", required=True)
+    ap.add_argument("--conf", type=float, default=0.4)
+    ap.add_argument("--iou", type=float, default=0.5)
+    ap.add_argument("--width", type=int, default=1280)
+    ap.add_argument("--height", type=int, default=720)
+    ap.add_argument("--display", action="store_true", help="show a live window (VNC/HDMI)")
+    ap.add_argument("--save-dir", default=None, help="headless: save annotated frames here")
+    args = ap.parse_args()
+
+    run_pose_pipeline(
+        model=args.model,
+        conf=args.conf,
+        iou=args.iou,
+        width=args.width,
+        height=args.height,
+        display=args.display,
+        save_dir=args.save_dir,
+    )
 
 
 if __name__ == "__main__":

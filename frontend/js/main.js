@@ -21,14 +21,26 @@ function renderDashboard() {
 
 window.addEventListener("resize", updateChart);
 
-// Your Python WebSocket code can call:
-// window.updateDashboard({ people, frozen, fps })
-//
-// people: [{ id, x, y, activity, conf, since }, ...]
 window.updateDashboard = (data) => {
   applyDashboardUpdate(data);
   renderDashboard();
 };
 
+async function pollState() {
+  try {
+    const response = await fetch("/api/state", { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    window.updateDashboard(await response.json());
+  } catch (error) {
+    window.updateDashboard({
+      status: "dashboard_error",
+      error_message: error.message,
+      updated_at: new Date().toISOString(),
+    });
+  }
+}
+
 renderDashboard();
+pollState();
 setInterval(renderDashboard, 1000);
+setInterval(pollState, 400);

@@ -1,28 +1,26 @@
 import { dashboardState } from "./state.js";
 
+function formatUpdatedAt(value) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleTimeString();
+}
+
 export function renderHealth() {
   const rows = [
-    ["NPU model", "yolov8s_pose.hef + classifier"],
-    [
-      "Inference latency",
-      dashboardState.frozen
-        ? "--"
-        : `${(62 + Math.random() * 8).toFixed(0)} ms/frame`,
-    ],
+    ["Pipeline status", dashboardState.status || "unknown"],
+    ["Current class", dashboardState.currentClass || "unknown"],
+    ["Person count", String(dashboardState.personCount || 0)],
+    ["Focus score", `${Math.round(dashboardState.focusScore || 0)}%`],
     ["Pipeline FPS", dashboardState.frozen ? "0.0" : dashboardState.fps.toFixed(1)],
-    [
-      "Camera",
-      dashboardState.frozen ? "Disconnected" : "Camera Module 3 OK",
-    ],
-    [
-      "Unknown rate (5 min)",
-      `${(
-        dashboardState.oddActive
-          ? 18 + Math.random() * 6
-          : 2 + Math.random() * 2
-      ).toFixed(0)}%`,
-    ],
+    ["Inference latency", `${dashboardState.latencyMs.toFixed(1)} ms/frame`],
+    ["Last update", formatUpdatedAt(dashboardState.updatedAt)],
   ];
+
+  if (dashboardState.errorMessage) {
+    rows.push(["Error", dashboardState.errorMessage]);
+  }
 
   document.getElementById("health-table").innerHTML = rows
     .map(
