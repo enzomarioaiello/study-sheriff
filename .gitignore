@@ -3,6 +3,7 @@
 /venv
 /.venv
 src/data/raw
+/check
 
 hailort.log
 
