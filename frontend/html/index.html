@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Study Sheriff — Moderator Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
 <div class="wrap">
@@ -20,12 +20,12 @@
   <div class="grid">
     <div class="panel">
       <div class="camwrap">
-        <svg id="camsvg" viewBox="0 0 640 400"></svg>
-        <div class="badge live"><span class="dot" id="rec-dot"></span><span>LIVE</span></div>
+        <img id="video-feed" src="/video_feed" alt="Live annotated camera feed">
+        <div class="badge live"><span class="dot" id="rec-dot"></span><span id="live-label">STARTING</span></div>
         <div class="badge fps" id="fps-badge">-- FPS</div>
         <div class="freeze" id="freeze-banner">
           <span>&#9888;</span>
-          <span>Camera signal lost &mdash; last frame frozen</span>
+          <span id="freeze-text">Camera signal lost &mdash; last frame frozen</span>
         </div>
       </div>
       <div class="controls"></div>
@@ -84,6 +84,6 @@
 
 
 </div>
-  <script type="module" src="../js/main.js"></script>
+  <script type="module" src="/js/main.js"></script>
 </body>
 </html>

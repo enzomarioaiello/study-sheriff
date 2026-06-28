@@ -28,16 +28,7 @@ export function renderMetrics() {
     `
   ).join("");
 
-  const total = dashboardState.people.length;
-  const focusWeight =
-    counts.deskwork * 1.0 +
-    counts.talking * 0.5 +
-    counts.phone * 0.1 +
-    counts.resting * 0.2 +
-    counts.absent * 0 +
-    (counts.unknown || 0) * 0.3;
-
-  const score = total ? Math.round((focusWeight / total) * 100) : 0;
+  const score = Math.max(0, Math.min(100, Math.round(dashboardState.focusScore || 0)));
   document.getElementById("focus-score").textContent = `${score}%`;
 
   const focusBar = document.getElementById("focus-bar");
@@ -45,9 +36,13 @@ export function renderMetrics() {
   focusBar.style.background =
     score >= 60 ? "#1D9E75" : score >= 35 ? "#BA7517" : "#A32D2D";
 
-  dashboardState.history.push(counts);
-  if (dashboardState.history.length > dashboardState.maxHistory) {
-    dashboardState.history.shift();
+  const now = Date.now();
+  if (now - dashboardState.lastHistoryAt >= 1000) {
+    dashboardState.history.push(counts);
+    dashboardState.lastHistoryAt = now;
+    if (dashboardState.history.length > dashboardState.maxHistory) {
+      dashboardState.history.shift();
+    }
   }
 
   updateChart();
