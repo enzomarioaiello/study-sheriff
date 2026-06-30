@@ -10,6 +10,7 @@ import argparse
 import csv
 import io
 import json
+import shutil
 import random
 import sys
 from pathlib import Path
@@ -167,6 +168,15 @@ def collect_metrics(step, model, device, accuracy=None, onnx_path=None):
     }
 
 
+def try_export_onnx(model, path):
+    try:
+        export_onnx(model, path)
+        return str(path)
+    except Exception as exc:
+        print(f"[WARN] ONNX export skipped for {path}: {exc}")
+        return None
+
+
 def apply_structured_pruning(model, amount, min_channels):
     pruned = []
     for name, module in model.named_modules():
@@ -282,9 +292,12 @@ def print_metrics(row):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", default="data/dataset_all.npz")
-    ap.add_argument("--checkpoint", required=True,
+    ap.add_argument("--data", default="data/dataset_all.npz",
+                    help="optional dataset for accuracy, fine-tuning, and calibration")
+    ap.add_argument("--checkpoint", default="models/classifier.pt",
                     help="trained baseline checkpoint from train_classifier.py")
+    ap.add_argument("--baseline-onnx", default="models/classifier.onnx",
+                    help="already-exported baseline ONNX to copy into the output folder")
     ap.add_argument("--out-dir", default="results/compression")
     ap.add_argument("--prune-amount", type=float, default=0.25,
                     help="fraction of output channels/units to prune in eligible layers")
@@ -307,23 +320,34 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    data = np.load(args.data, allow_pickle=True)
-    crops = data["crops"]
-    kpts = data["keypoints"]
-    labels = data["labels"]
-    subjects = data["subjects"]
-    split = person_split(subjects, labels, seed=args.seed)
-
-    train_loader = make_loader(crops, kpts, labels, split, "train", args.batch, shuffle=True)
-    val_loader = make_loader(crops, kpts, labels, split, "val", args.batch)
-    test_loader = make_loader(crops, kpts, labels, split, "test", args.batch)
+    data_path = Path(args.data)
+    has_data = data_path.exists()
+    if has_data:
+        data = np.load(data_path, allow_pickle=True)
+        crops = data["crops"]
+        kpts = data["keypoints"]
+        labels = data["labels"]
+        subjects = data["subjects"]
+        split = person_split(subjects, labels, seed=args.seed)
+        train_loader = make_loader(crops, kpts, labels, split, "train", args.batch, shuffle=True)
+        val_loader = make_loader(crops, kpts, labels, split, "val", args.batch)
+        test_loader = make_loader(crops, kpts, labels, split, "test", args.batch)
+    else:
+        print(f"[WARN] dataset not found at {data_path}; skipping accuracy, fine-tuning, and calibration")
+        crops = kpts = labels = subjects = split = None
+        train_loader = val_loader = test_loader = None
 
     model = FusionClassifier(len(CLASS_NAMES), pretrained=False).to(device)
     load_checkpoint(model, args.checkpoint, device)
 
-    baseline_onnx = out_dir / "classifier_baseline.onnx"
-    baseline_acc, baseline_cm = evaluate(model, test_loader, device)
-    export_onnx(model, baseline_onnx)
+    baseline_onnx = Path(args.baseline_onnx)
+    out_baseline_onnx = out_dir / "classifier_baseline.onnx"
+    if baseline_onnx.exists():
+        shutil.copy2(baseline_onnx, out_baseline_onnx)
+    else:
+        try_export_onnx(model, out_baseline_onnx)
+
+    baseline_acc, baseline_cm = evaluate(model, test_loader, device) if has_data else (None, None)
     rows = [collect_metrics("baseline", model, device, baseline_acc, baseline_onnx)]
     print_metrics(rows[-1])
 
@@ -333,27 +357,38 @@ def main():
         suffix = " ..." if len(pruned_layers) > 12 else ""
         print("[PRUNE] " + ", ".join(pruned_layers[:12]) + suffix)
 
-    fine_tune(model, train_loader, val_loader, device, args.fine_tune_epochs, args.lr)
-    pruned_acc, pruned_cm = evaluate(model, test_loader, device)
+    if has_data:
+        fine_tune(model, train_loader, val_loader, device, args.fine_tune_epochs, args.lr)
+        pruned_acc, pruned_cm = evaluate(model, test_loader, device)
+    else:
+        print("[INFO] pruning masks applied without fine-tuning because no dataset is available")
+        pruned_acc, pruned_cm = None, None
 
     pruned_ckpt = out_dir / "classifier_pruned.pt"
     torch.save(model.state_dict(), pruned_ckpt)
     pruned_onnx = out_dir / "classifier_pruned.onnx"
-    export_onnx(model, pruned_onnx)
+    exported_pruned_onnx = try_export_onnx(model, pruned_onnx)
     rows.append(collect_metrics("structured_prune", model, device, pruned_acc, pruned_onnx))
     print_metrics(rows[-1])
 
-    calib_path = out_dir / "classifier_calib.npz"
-    calib_n = export_calibration(
-        crops, kpts, split, calib_path, args.calib_split, args.calib_samples, args.seed
-    )
-    print(f"[CALIB] wrote {calib_n} samples -> {calib_path}")
+    if has_data:
+        calib_path = out_dir / "classifier_calib.npz"
+        calib_n = export_calibration(
+            crops, kpts, split, calib_path, args.calib_split, args.calib_samples, args.seed
+        )
+        print(f"[CALIB] wrote {calib_n} samples -> {calib_path}")
+    else:
+        print("[WARN] no calibration file written; rerun with --data before Hailo INT8 compilation")
 
-    np.save(out_dir / "baseline_confusion_matrix.npy", baseline_cm)
-    np.save(out_dir / "pruned_confusion_matrix.npy", pruned_cm)
+    if has_data:
+        np.save(out_dir / "baseline_confusion_matrix.npy", baseline_cm)
+        np.save(out_dir / "pruned_confusion_matrix.npy", pruned_cm)
     json_path, csv_path = write_reports(rows, out_dir)
     print(f"[REPORT] {json_path}")
     print(f"[REPORT] {csv_path}")
+
+    if exported_pruned_onnx is None:
+        print("[WARN] install the ONNX package, then rerun to produce classifier_pruned.onnx")
 
     if baseline_acc is not None and pruned_acc is not None:
         drop = baseline_acc - pruned_acc
