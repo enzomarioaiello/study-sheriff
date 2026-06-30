@@ -1,7 +1,5 @@
 import { renderCamera } from "./camera.js";
-import { updateChart } from "./chart.js";
 import { renderMetrics } from "./metrics.js";
-import { renderPersonTable } from "./persons.js";
 import { renderHealth } from "./health.js";
 import { renderAlert } from "./alert.js";
 import { applyDashboardUpdate } from "./state.js";
@@ -14,12 +12,9 @@ function renderDashboard() {
   renderClock();
   renderCamera();
   renderMetrics();
-  renderPersonTable();
   renderHealth();
   renderAlert();
 }
-
-window.addEventListener("resize", updateChart);
 
 window.updateDashboard = (data) => {
   applyDashboardUpdate(data);

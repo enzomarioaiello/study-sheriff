@@ -7,83 +7,102 @@
   <link rel="stylesheet" href="/css/dashboard.css">
 </head>
 <body>
-<div class="wrap">
-
-  <div class="header">
-    <div>
-      <h1>Study Sheriff</h1>
-      <div class="sub">Library study-space monitor &mdash; moderator view</div>
-    </div>
-    <div class="clock" id="clock"></div>
-  </div>
-
-  <div class="grid">
-    <div class="panel">
-      <div class="camwrap">
-        <img id="video-feed" src="/video_feed" alt="Live annotated camera feed">
-        <div class="badge live"><span class="dot" id="rec-dot"></span><span id="live-label">STARTING</span></div>
-        <div class="badge fps" id="fps-badge">-- FPS</div>
-        <div class="freeze" id="freeze-banner">
-          <span>&#9888;</span>
-          <span id="freeze-text">Camera signal lost &mdash; last frame frozen</span>
+  <div class="dashboard-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="img">
+            <path d="M12 2.7 14.6 8l5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1L9.4 8 12 2.7Z"/>
+            <circle cx="12" cy="11.2" r="2.2"/>
+          </svg>
+        </span>
+        <div>
+          <h1>Study Sheriff</h1>
+          <p>Library study-space monitor &mdash; moderator view</p>
         </div>
       </div>
-      <div class="controls"></div>
-    </div>
 
-    <div>
-      <div class="metric-grid" id="metric-grid"></div>
-      <div class="focus-card">
-        <div class="focus-top">
-          <span class="lbl">Focus score</span>
-          <span class="hint">deskwork + talking weighted</span>
-        </div>
-        <div class="focus-row">
-          <span class="focus-score" id="focus-score">--</span>
-          <div class="focus-bar-bg"><div class="focus-bar" id="focus-bar"></div></div>
-        </div>
+      <div class="topbar-meta">
+        <time class="clock" id="clock"></time>
       </div>
-    </div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel camera-panel" aria-label="Live camera">
+        <div class="panel-heading">
+          <div>
+            <h2>Live camera</h2>
+            <p>Annotated study-space feed</p>
+          </div>
+          <span class="panel-kicker">Camera 01</span>
+        </div>
+
+        <div class="camwrap">
+          <img id="video-feed" src="/video_feed" alt="Live annotated camera feed">
+          <div class="badge live">
+            <span class="dot" id="rec-dot"></span>
+            <span id="live-label">STARTING</span>
+          </div>
+          <div class="badge fps" id="fps-badge">-- FPS</div>
+          <div class="freeze" id="freeze-banner">
+            <span class="freeze-icon" aria-hidden="true">!</span>
+            <span id="freeze-text">Camera signal lost &mdash; last frame frozen</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="side-stack" aria-label="Monitoring details">
+        <div class="alert" id="alert-box" role="status">
+          <span class="alert-icon" aria-hidden="true">!</span>
+          <span id="alert-text"></span>
+        </div>
+
+        <section class="activity-summary" aria-label="Current activity summary">
+          <div class="section-heading">
+            <div>
+              <h2>Current activity</h2>
+              <p>People by detected behaviour</p>
+            </div>
+            <span class="section-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 15.5 8.5 11l3 3L20 5.5"/>
+                <path d="M15 5.5h5v5"/>
+              </svg>
+            </span>
+          </div>
+
+          <div class="metric-grid" id="metric-grid"></div>
+
+          <div class="focus-card">
+            <div class="focus-top">
+              <span class="lbl">Focus score</span>
+              <span class="hint">deskwork + talking weighted</span>
+            </div>
+            <div class="focus-row">
+              <span class="focus-score" id="focus-score">--</span>
+              <div class="focus-bar-bg" aria-hidden="true">
+                <div class="focus-bar" id="focus-bar"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel health-panel" aria-label="System health">
+          <div class="panel-heading">
+            <div>
+              <h2>System health</h2>
+              <p>Pipeline and camera diagnostics</p>
+            </div>
+            <span class="panel-kicker">Diagnostics</span>
+          </div>
+          <table>
+            <tbody id="health-table"></tbody>
+          </table>
+        </section>
+      </aside>
+    </main>
   </div>
 
-  <div class="two-col">
-    <div class="panel">
-      <h2>Activity over time</h2>
-      <div class="chartwrap"><canvas id="trendChart"></canvas></div>
-      <div class="legend" id="trend-legend"></div>
-    </div>
-    <div class="panel">
-      <h2>System health</h2>
-      <table><tbody id="health-table"></tbody></table>
-    </div>
-  </div>
-
-  <div class="panel" style="margin-top:16px;">
-    <h2 style="display:flex; justify-content:space-between; align-items:baseline;">
-      <span>People in frame</span>
-      <span id="person-count-label" style="font-size:12px; color:var(--text2); font-weight:400;"></span>
-    </h2>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:14%;">ID</th>
-          <th style="width:34%;">Activity</th>
-          <th style="width:24%;">Confidence</th>
-          <th class="right" style="width:28%;">Time in activity</th>
-        </tr>
-      </thead>
-      <tbody id="person-table"></tbody>
-    </table>
-  </div>
-
-  <div class="alert" id="alert-box">
-    <span>&#9888;</span>
-    <span id="alert-text"></span>
-  </div>
-
-
-
-</div>
   <script type="module" src="/js/main.js"></script>
 </body>
 </html>

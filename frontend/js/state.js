@@ -12,9 +12,6 @@ export const dashboardState = {
   errorMessage: "",
   updatedAt: null,
   oddActive: false,
-  history: [],
-  maxHistory: 24,
-  lastHistoryAt: 0,
 };
 
 function normalizeActivity(label) {
