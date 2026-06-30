@@ -1,6 +1,5 @@
 import { CLASSES, COLORS, LABELS } from "./config.js";
 import { dashboardState } from "./state.js";
-import { updateChart } from "./chart.js";
 
 export function renderMetrics() {
   const counts = {
@@ -35,15 +34,4 @@ export function renderMetrics() {
   focusBar.style.width = `${score}%`;
   focusBar.style.background =
     score >= 60 ? "#1D9E75" : score >= 35 ? "#BA7517" : "#A32D2D";
-
-  const now = Date.now();
-  if (now - dashboardState.lastHistoryAt >= 1000) {
-    dashboardState.history.push(counts);
-    dashboardState.lastHistoryAt = now;
-    if (dashboardState.history.length > dashboardState.maxHistory) {
-      dashboardState.history.shift();
-    }
-  }
-
-  updateChart();
 }
