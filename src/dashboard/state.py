@@ -35,6 +35,7 @@ class DashboardState:
             "current_class": "unknown",
             "focus_score": 0,
             "person_count": 0,
+            "persons": [],                 # [{activity, conf}, ...] -> per-person table
             "fps": 0.0,
             "latency_ms": 0.0,
             "status": "starting",
@@ -73,6 +74,7 @@ class DashboardState:
         current_class=_UNSET,
         focus_score=_UNSET,
         person_count=_UNSET,
+        persons=_UNSET,
         fps=_UNSET,
         latency_ms=_UNSET,
         status=_UNSET,
@@ -82,6 +84,7 @@ class DashboardState:
             "current_class": current_class,
             "focus_score": focus_score,
             "person_count": person_count,
+            "persons": persons,
             "fps": fps,
             "latency_ms": latency_ms,
             "status": status,

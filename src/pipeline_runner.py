@@ -122,12 +122,15 @@ def _publish_result(shared_state, result):
     if focus_score is None:
         focus_score = compute_focus_score(labels or [current_class])
 
+    persons = result.get("persons") or []
+
     if frame is not None:
         shared_state.update_frame(frame)
     shared_state.update_metadata(
         current_class=current_class,
         focus_score=focus_score,
         person_count=person_count,
+        persons=persons,
         fps=round(float(result.get("fps") or 0.0), 1),
         latency_ms=round(float(result.get("latency_ms") or 0.0), 1),
         status="running",

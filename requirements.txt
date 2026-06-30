@@ -1,2 +1,9 @@
 fastapi
 uvicorn
+# --- pipeline runtime (on the Pi) ---
+opencv-python
+numpy
+onnxruntime          # CPU classifier inference (MobileNetV3 classifier.onnx)
+# picamera2 is apt-installed (sudo apt install python3-picamera2); use a --system-site-packages venv.
+# hailo_platform (pyhailort) is the Hailo Developer Zone wheel, NOT pip:
+#   pip install ~/hailort-5.3.0-cp313-cp313-linux_aarch64.whl

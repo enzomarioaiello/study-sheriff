@@ -54,6 +54,23 @@ function buildPeopleFromMetadata(data) {
   });
 }
 
+// Preferred path: real per-person {activity, conf} from the backend pipeline.
+function buildPeopleFromPersons(persons) {
+  const now = Date.now();
+  return persons.map((person, index) => {
+    const id = `P${index + 1}`;
+    const activity = normalizeActivity(person.activity);
+    const previous = dashboardState.people.find((p) => p.id === id);
+    const sameActivity = previous && previous.activity === activity;
+    return {
+      id,
+      activity,
+      conf: typeof person.conf === "number" ? person.conf : 1,
+      since: sameActivity ? previous.since : now,
+    };
+  });
+}
+
 export function applyDashboardUpdate(data = {}) {
   const hasBackendState =
     data.current_class !== undefined ||
@@ -70,7 +87,10 @@ export function applyDashboardUpdate(data = {}) {
     dashboardState.status = data.status || "unknown";
     dashboardState.errorMessage = data.error_message || "";
     dashboardState.updatedAt = data.updated_at || null;
-    dashboardState.people = buildPeopleFromMetadata(data);
+    dashboardState.people =
+      Array.isArray(data.persons) && data.persons.length
+        ? buildPeopleFromPersons(data.persons)        // real per-person activity + confidence
+        : buildPeopleFromMetadata(data);              // fallback: aggregate current_class
     dashboardState.frozen = ["camera_error", "npu_error", "pipeline_error", "dashboard_error"].includes(
       dashboardState.status
     );
