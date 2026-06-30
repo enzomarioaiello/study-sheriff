@@ -11,6 +11,9 @@ export const dashboardState = {
   status: "starting",
   errorMessage: "",
   updatedAt: null,
+  frameUpdatedAt: null,
+  frameAgeSeconds: null,
+  frameStaleAfterSeconds: 3,
   oddActive: false,
   history: [],
   maxHistory: 24,
@@ -36,6 +39,8 @@ function normalizeActivity(label) {
 }
 
 function buildPeopleFromMetadata(data) {
+  if (data.status === "camera_stale") return [];
+
   const count = Number(data.person_count || 0);
   if (count <= 0) return [];
 
@@ -70,10 +75,20 @@ export function applyDashboardUpdate(data = {}) {
     dashboardState.status = data.status || "unknown";
     dashboardState.errorMessage = data.error_message || "";
     dashboardState.updatedAt = data.updated_at || null;
+    dashboardState.frameUpdatedAt = data.frame_updated_at || null;
+    dashboardState.frameAgeSeconds =
+      data.frame_age_seconds === null || data.frame_age_seconds === undefined
+        ? null
+        : Number(data.frame_age_seconds);
+    dashboardState.frameStaleAfterSeconds = Number(data.frame_stale_after_seconds || 3);
     dashboardState.people = buildPeopleFromMetadata(data);
-    dashboardState.frozen = ["camera_error", "npu_error", "pipeline_error", "dashboard_error"].includes(
-      dashboardState.status
-    );
+    dashboardState.frozen = [
+      "camera_stale",
+      "camera_error",
+      "npu_error",
+      "pipeline_error",
+      "dashboard_error",
+    ].includes(dashboardState.status);
   } else {
     if (data.people !== undefined) dashboardState.people = data.people;
     if (data.frozen !== undefined) dashboardState.frozen = data.frozen;

@@ -25,4 +25,4 @@ http://10.55.0.2:8080
 
 Use `--workers 1` only, so the camera and NPU pipeline starts once. If the real
 camera, Hailo runtime, or model cannot start, the web server stays alive and the
-dashboard shows mock mode with the error message in `/api/state`.
+dashboard shows an offline/error state with no mock occupancy or activity data.

@@ -1,5 +1,7 @@
 import base64
+import os
 import threading
+import time
 from datetime import datetime, timezone
 
 try:
@@ -21,6 +23,7 @@ _BLANK_JPEG = base64.b64decode(
     b"srO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD4cooor0zzz//Z"
 )
 _UNSET = object()
+DEFAULT_FRAME_STALE_AFTER_SECONDS = 3.0
 
 
 def _now_iso():
@@ -28,9 +31,15 @@ def _now_iso():
 
 
 class DashboardState:
-    def __init__(self):
+    def __init__(self, frame_stale_after_seconds=None):
         self._lock = threading.Lock()
         self._frame_bytes = None
+        self._frame_updated_monotonic = None
+        self._frame_stale_after_seconds = (
+            float(frame_stale_after_seconds)
+            if frame_stale_after_seconds is not None
+            else _frame_stale_after_seconds_from_env()
+        )
         self._metadata = {
             "current_class": "unknown",
             "focus_score": 0,
@@ -40,6 +49,9 @@ class DashboardState:
             "status": "starting",
             "error_message": None,
             "updated_at": _now_iso(),
+            "frame_updated_at": None,
+            "frame_age_seconds": None,
+            "frame_stale_after_seconds": self._frame_stale_after_seconds,
         }
 
     def update_frame(self, frame_bgr, jpeg_quality=70, max_width=854):
@@ -66,7 +78,9 @@ class DashboardState:
 
         with self._lock:
             self._frame_bytes = encoded.tobytes()
+            self._frame_updated_monotonic = time.monotonic()
             self._metadata["updated_at"] = _now_iso()
+            self._metadata["frame_updated_at"] = self._metadata["updated_at"]
 
     def update_metadata(
         self,
@@ -95,13 +109,17 @@ class DashboardState:
 
     def get_snapshot(self):
         with self._lock:
-            return dict(self._metadata)
+            return self._snapshot_locked()
 
     def get_frame(self):
         with self._lock:
             frame = self._frame_bytes
-            status = self._metadata.get("status") or "starting"
-            error_message = self._metadata.get("error_message")
+            snapshot = self._snapshot_locked()
+            status = snapshot.get("status") or "starting"
+            error_message = snapshot.get("error_message")
+            stale = status == "camera_stale"
+        if stale:
+            return self._fallback_frame("camera_stale", error_message)
         if frame is not None:
             return frame
         return self._fallback_frame(status, error_message)
@@ -109,13 +127,43 @@ class DashboardState:
     def set_error(self, status, error_message):
         self.update_metadata(status=status, error_message=str(error_message))
 
+    def _snapshot_locked(self):
+        snapshot = dict(self._metadata)
+        age_seconds = self._frame_age_seconds_locked()
+        snapshot["frame_age_seconds"] = age_seconds
+        snapshot["frame_stale_after_seconds"] = self._frame_stale_after_seconds
+
+        if self._is_frame_stale_locked(age_seconds):
+            snapshot.update(
+                {
+                    "current_class": "unavailable",
+                    "focus_score": 0,
+                    "person_count": 0,
+                    "fps": 0.0,
+                    "latency_ms": 0.0,
+                    "status": "camera_stale",
+                    "error_message": "Camera Offline / Feed Stale - no new frame received.",
+                }
+            )
+        return snapshot
+
+    def _frame_age_seconds_locked(self):
+        if self._frame_updated_monotonic is None:
+            return None
+        return round(time.monotonic() - self._frame_updated_monotonic, 2)
+
+    def _is_frame_stale_locked(self, age_seconds):
+        if self._frame_updated_monotonic is None:
+            return False
+        return age_seconds is not None and age_seconds > self._frame_stale_after_seconds
+
     def _fallback_frame(self, status, error_message=None):
         if cv2 is None or np is None:
             return _BLANK_JPEG
 
         frame = np.zeros((480, 854, 3), dtype=np.uint8)
         frame[:] = (35, 45, 56)
-        title = "Waiting for camera..."
+        title = "Camera Offline / Feed Stale" if status == "camera_stale" else "Waiting for camera..."
         detail = error_message or status
         cv2.putText(
             frame,
@@ -141,6 +189,16 @@ class DashboardState:
         if not ok:
             return _BLANK_JPEG
         return encoded.tobytes()
+
+
+def _frame_stale_after_seconds_from_env():
+    raw_value = os.environ.get("STUDY_SHERIFF_FRAME_STALE_SECONDS")
+    if not raw_value:
+        return DEFAULT_FRAME_STALE_AFTER_SECONDS
+    try:
+        return max(0.5, float(raw_value))
+    except ValueError:
+        return DEFAULT_FRAME_STALE_AFTER_SECONDS
 
 
 shared_state = DashboardState()

@@ -10,10 +10,23 @@ function formatElapsedTime(milliseconds) {
 
 export function renderPersonTable() {
   document.getElementById("person-count-label").textContent =
-    `${dashboardState.people.length} detected`;
+    dashboardState.frozen ? "feed stale" : `${dashboardState.people.length} detected`;
 
   const now = Date.now();
-  document.getElementById("person-table").innerHTML = dashboardState.people
+  const personTable = document.getElementById("person-table");
+
+  if (dashboardState.frozen) {
+    personTable.innerHTML = `
+      <tr>
+        <td colspan="4" style="color:var(--text2);">
+          Occupancy and activity results paused until a new frame arrives.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  personTable.innerHTML = dashboardState.people
     .map((person) => {
       const isUnknown = person.activity === "unknown";
       const color = isUnknown ? UNKNOWN_COLOR : COLORS[person.activity];

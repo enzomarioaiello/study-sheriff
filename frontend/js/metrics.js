@@ -29,15 +29,15 @@ export function renderMetrics() {
   ).join("");
 
   const score = Math.max(0, Math.min(100, Math.round(dashboardState.focusScore || 0)));
-  document.getElementById("focus-score").textContent = `${score}%`;
+  document.getElementById("focus-score").textContent = dashboardState.frozen ? "--" : `${score}%`;
 
   const focusBar = document.getElementById("focus-bar");
-  focusBar.style.width = `${score}%`;
+  focusBar.style.width = dashboardState.frozen ? "0%" : `${score}%`;
   focusBar.style.background =
     score >= 60 ? "#1D9E75" : score >= 35 ? "#BA7517" : "#A32D2D";
 
   const now = Date.now();
-  if (now - dashboardState.lastHistoryAt >= 1000) {
+  if (!dashboardState.frozen && now - dashboardState.lastHistoryAt >= 1000) {
     dashboardState.history.push(counts);
     dashboardState.lastHistoryAt = now;
     if (dashboardState.history.length > dashboardState.maxHistory) {

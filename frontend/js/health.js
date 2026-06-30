@@ -8,13 +8,19 @@ function formatUpdatedAt(value) {
 }
 
 export function renderHealth() {
+  const frameAge =
+    dashboardState.frameAgeSeconds === null
+      ? "--"
+      : `${dashboardState.frameAgeSeconds.toFixed(1)} s`;
   const rows = [
     ["Pipeline status", dashboardState.status || "unknown"],
     ["Current class", dashboardState.currentClass || "unknown"],
     ["Person count", String(dashboardState.personCount || 0)],
-    ["Focus score", `${Math.round(dashboardState.focusScore || 0)}%`],
+    ["Focus score", dashboardState.frozen ? "--" : `${Math.round(dashboardState.focusScore || 0)}%`],
     ["Pipeline FPS", dashboardState.frozen ? "0.0" : dashboardState.fps.toFixed(1)],
     ["Inference latency", `${dashboardState.latencyMs.toFixed(1)} ms/frame`],
+    ["Last frame", formatUpdatedAt(dashboardState.frameUpdatedAt)],
+    ["Frame age", frameAge],
     ["Last update", formatUpdatedAt(dashboardState.updatedAt)],
   ];
 
