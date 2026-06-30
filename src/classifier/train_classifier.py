@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-StudySheriff -- train the MobileNetV3 fusion activity classifier (Requirement 1).
+Train the MobileNetV3 fusion activity classifier (Requirement 1).
 
 Two branches fused into 5 classes:
     crop (224x224) -> MobileNetV3-Small backbone (576-d)
@@ -29,9 +28,10 @@ STD = np.array([0.229, 0.224, 0.225], np.float32)
 
 # ---------------------------- model ----------------------------
 class FusionClassifier(nn.Module):
-    def __init__(self, n_classes=5, n_kp=17, in_per_kp=3, pose_out=64):
+    def __init__(self, n_classes=5, n_kp=17, in_per_kp=3, pose_out=64, pretrained=True):
         super().__init__()
-        self.backbone = mobilenet_v3_small(weights=MobileNet_V3_Small_Weights.IMAGENET1K_V1)
+        weights = MobileNet_V3_Small_Weights.IMAGENET1K_V1 if pretrained else None
+        self.backbone = mobilenet_v3_small(weights=weights)
         feat_dim = self.backbone.classifier[0].in_features          # 576 (read, don't hardcode)
         self.backbone.classifier = nn.Identity()
         self.pose = nn.Sequential(
@@ -95,6 +95,8 @@ def main():
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--out", default="classifier.pt")
     ap.add_argument("--onnx", default="classifier.onnx")
+    ap.add_argument("--no-pretrained", action="store_true",
+                    help="do not load ImageNet weights before training")
     args = ap.parse_args()
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
@@ -115,7 +117,7 @@ def main():
                           batch_size=args.batch, shuffle=shuffle, num_workers=2)
 
     tr, va, te = loader("train", True), loader("val"), loader("test")
-    model = FusionClassifier(len(CLASS_NAMES)).to(dev)
+    model = FusionClassifier(len(CLASS_NAMES), pretrained=not args.no_pretrained).to(dev)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
     crit = nn.CrossEntropyLoss()
 
