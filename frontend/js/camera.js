@@ -7,6 +7,7 @@ export function renderCamera() {
   const liveLabel = document.getElementById("live-label");
   const fpsBadge = document.getElementById("fps-badge");
   const frameFreshness = document.getElementById("frame-freshness");
+  const runState = document.getElementById("run-state");
 
   const status = dashboardState.status || "unknown";
   const hasError = Boolean(dashboardState.errorMessage);
@@ -31,4 +32,7 @@ export function renderCamera() {
     status === "camera_stale"
       ? `STALE ${hasFrameAge ? frameAge.toFixed(1) : "--"}s`
       : `FRAME OK ${hasFrameAge ? frameAge.toFixed(1) : "--"}s`;
+
+  runState.classList.toggle("running", status === "running");
+  runState.textContent = status === "running" ? "RUNNING" : "NOT RUNNING";
 }
