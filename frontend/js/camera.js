@@ -6,14 +6,12 @@ export function renderCamera() {
   const recDot = document.getElementById("rec-dot");
   const liveLabel = document.getElementById("live-label");
   const fpsBadge = document.getElementById("fps-badge");
-  const frameFreshness = document.getElementById("frame-freshness");
   const runState = document.getElementById("run-state");
 
   const status = dashboardState.status || "unknown";
   const hasError = Boolean(dashboardState.errorMessage);
   const showBanner = dashboardState.frozen || hasError;
-  const frameAge = dashboardState.frameAgeSeconds;
-  const hasFrameAge = frameAge !== null && frameAge !== undefined && Number.isFinite(frameAge);
+  const framesAreRunning = !dashboardState.frozen && status === "running";
 
   freezeBanner.style.display = showBanner ? "flex" : "none";
   freezeText.textContent =
@@ -27,12 +25,6 @@ export function renderCamera() {
     ? "FROZEN"
     : `${dashboardState.fps.toFixed(1)} FPS`;
 
-  frameFreshness.classList.toggle("stale", status === "camera_stale");
-  frameFreshness.textContent =
-    status === "camera_stale"
-      ? `STALE ${hasFrameAge ? frameAge.toFixed(1) : "--"}s`
-      : `FRAME OK ${hasFrameAge ? frameAge.toFixed(1) : "--"}s`;
-
-  runState.classList.toggle("running", status === "running");
-  runState.textContent = status === "running" ? "RUNNING" : "NOT RUNNING";
+  runState.classList.toggle("running", framesAreRunning);
+  runState.textContent = framesAreRunning ? "RUNNING" : "NOT RUNNING";
 }
