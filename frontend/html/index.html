@@ -8,35 +8,8 @@
 </head>
 <body>
   <div class="dashboard-shell">
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="img">
-            <path d="M12 2.7 14.6 8l5.8.8-4.2 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.2-4.1L9.4 8 12 2.7Z"/>
-            <circle cx="12" cy="11.2" r="2.2"/>
-          </svg>
-        </span>
-        <div>
-          <h1>Study Sheriff</h1>
-          <p>Library study-space monitor &mdash; moderator view</p>
-        </div>
-      </div>
-
-      <div class="topbar-meta">
-        <time class="clock" id="clock"></time>
-      </div>
-    </header>
-
     <main class="workspace">
-      <section class="panel camera-panel" aria-label="Live camera">
-        <div class="panel-heading">
-          <div>
-            <h2>Live camera</h2>
-            <p>Annotated study-space feed</p>
-          </div>
-          <span class="panel-kicker">Camera 01</span>
-        </div>
-
+      <section class="camera-panel" id="camera-section" aria-label="Live camera">
         <div class="camwrap">
           <img id="video-feed" src="/video_feed" alt="Live annotated camera feed">
           <div class="badge live">
@@ -52,16 +25,10 @@
       </section>
 
       <aside class="side-stack" aria-label="Monitoring details">
-        <div class="alert" id="alert-box" role="status">
-          <span class="alert-icon" aria-hidden="true">!</span>
-          <span id="alert-text"></span>
-        </div>
-
-        <section class="activity-summary" aria-label="Current activity summary">
+        <section class="activity-summary" id="activity-section" aria-label="Current activity summary">
           <div class="section-heading">
             <div>
               <h2>Current activity</h2>
-              <p>People by detected behaviour</p>
             </div>
             <span class="section-mark" aria-hidden="true">
               <svg viewBox="0 0 24 24">
@@ -71,37 +38,54 @@
             </span>
           </div>
 
+          <div class="people-activity" aria-live="polite">
+            <h3>Detected people</h3>
+            <div class="people-activity-list" id="people-activity-list"></div>
+          </div>
+
           <div class="metric-grid" id="metric-grid"></div>
 
-          <div class="focus-card">
-            <div class="focus-top">
-              <span class="lbl">Focus score</span>
-              <span class="hint">deskwork + talking weighted</span>
-            </div>
-            <div class="focus-row">
-              <span class="focus-score" id="focus-score">--</span>
-              <div class="focus-bar-bg" aria-hidden="true">
-                <div class="focus-bar" id="focus-bar"></div>
-              </div>
-            </div>
+          <div class="diagnostics-footer">
+            <button class="diagnostics-button" type="button" data-open-dialog="diagnostics-modal">
+              Diagnostics
+            </button>
           </div>
-        </section>
-
-        <section class="panel health-panel" aria-label="System health">
-          <div class="panel-heading">
-            <div>
-              <h2>System health</h2>
-              <p>Pipeline and camera diagnostics</p>
-            </div>
-            <span class="panel-kicker">Diagnostics</span>
-          </div>
-          <table>
-            <tbody id="health-table"></tbody>
-          </table>
         </section>
       </aside>
     </main>
   </div>
+
+  <dialog class="modal diagnostics-modal" id="diagnostics-modal" aria-labelledby="diagnostics-title">
+    <div class="modal-card">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">System health</p>
+          <h2 id="diagnostics-title">Diagnostics</h2>
+          <p>Live pipeline and camera information.</p>
+        </div>
+        <button class="close-button" type="button" data-close-dialog aria-label="Close diagnostics">
+          Close
+        </button>
+      </div>
+
+      <section class="diagnostics-panel" aria-label="System diagnostics">
+        <div class="alert" id="alert-box" role="status">
+          <span class="alert-icon" aria-hidden="true">!</span>
+          <span id="alert-text"></span>
+        </div>
+        <div class="panel-heading">
+          <div>
+            <h2>System diagnostics</h2>
+            <p>Pipeline and camera status</p>
+          </div>
+          <span class="panel-kicker">Live</span>
+        </div>
+        <table>
+          <tbody id="health-table"></tbody>
+        </table>
+      </section>
+    </div>
+  </dialog>
 
   <script type="module" src="/js/main.js"></script>
 </body>

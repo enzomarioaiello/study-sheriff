@@ -3,13 +3,9 @@ import { renderMetrics } from "./metrics.js";
 import { renderHealth } from "./health.js";
 import { renderAlert } from "./alert.js";
 import { applyDashboardUpdate } from "./state.js";
-
-function renderClock() {
-  document.getElementById("clock").textContent = new Date().toLocaleTimeString();
-}
+import { initializeDialogs } from "./dialogs.js";
 
 function renderDashboard() {
-  renderClock();
   renderCamera();
   renderMetrics();
   renderHealth();
@@ -35,6 +31,7 @@ async function pollState() {
   }
 }
 
+initializeDialogs();
 renderDashboard();
 pollState();
 setInterval(renderDashboard, 1000);
