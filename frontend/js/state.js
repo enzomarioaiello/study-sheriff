@@ -15,9 +15,6 @@ export const dashboardState = {
   frameAgeSeconds: null,
   frameStaleAfterSeconds: 3,
   oddActive: false,
-  history: [],
-  maxHistory: 24,
-  lastHistoryAt: 0,
 };
 
 function normalizeActivity(label) {
@@ -59,6 +56,23 @@ function buildPeopleFromMetadata(data) {
   });
 }
 
+// Preferred path: real per-person {activity, conf} from the backend pipeline.
+function buildPeopleFromPersons(persons) {
+  const now = Date.now();
+  return persons.map((person, index) => {
+    const id = `P${index + 1}`;
+    const activity = normalizeActivity(person.activity);
+    const previous = dashboardState.people.find((p) => p.id === id);
+    const sameActivity = previous && previous.activity === activity;
+    return {
+      id,
+      activity,
+      conf: typeof person.conf === "number" ? person.conf : 1,
+      since: sameActivity ? previous.since : now,
+    };
+  });
+}
+
 export function applyDashboardUpdate(data = {}) {
   const hasBackendState =
     data.current_class !== undefined ||
@@ -81,7 +95,12 @@ export function applyDashboardUpdate(data = {}) {
         ? null
         : Number(data.frame_age_seconds);
     dashboardState.frameStaleAfterSeconds = Number(data.frame_stale_after_seconds || 3);
-    dashboardState.people = buildPeopleFromMetadata(data);
+    dashboardState.people =
+      dashboardState.status === "camera_stale"
+        ? []
+        : Array.isArray(data.persons) && data.persons.length
+          ? buildPeopleFromPersons(data.persons)      // real per-person activity + confidence
+          : buildPeopleFromMetadata(data);            // fallback: aggregate current_class
     dashboardState.frozen = [
       "camera_stale",
       "camera_error",

@@ -1,25 +1,16 @@
 import { renderCamera } from "./camera.js";
-import { updateChart } from "./chart.js";
 import { renderMetrics } from "./metrics.js";
-import { renderPersonTable } from "./persons.js";
 import { renderHealth } from "./health.js";
 import { renderAlert } from "./alert.js";
 import { applyDashboardUpdate } from "./state.js";
-
-function renderClock() {
-  document.getElementById("clock").textContent = new Date().toLocaleTimeString();
-}
+import { initializeDialogs } from "./dialogs.js";
 
 function renderDashboard() {
-  renderClock();
   renderCamera();
   renderMetrics();
-  renderPersonTable();
   renderHealth();
   renderAlert();
 }
-
-window.addEventListener("resize", updateChart);
 
 window.updateDashboard = (data) => {
   applyDashboardUpdate(data);
@@ -40,6 +31,7 @@ async function pollState() {
   }
 }
 
+initializeDialogs();
 renderDashboard();
 pollState();
 setInterval(renderDashboard, 1000);

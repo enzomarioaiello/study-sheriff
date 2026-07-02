@@ -4,11 +4,7 @@ export function renderAlert() {
   const alertBox = document.getElementById("alert-box");
   const alertText = document.getElementById("alert-text");
 
-  if (dashboardState.status === "camera_stale") {
-    alertBox.classList.add("show");
-    alertText.textContent =
-      "Camera Offline / Feed Stale - no new frame received, so occupancy and activity results are paused.";
-  } else if (dashboardState.errorMessage) {
+  if (dashboardState.errorMessage) {
     alertBox.classList.add("show");
     alertText.textContent = dashboardState.errorMessage;
   } else if (dashboardState.frozen) {
